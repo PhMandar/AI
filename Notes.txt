@@ -1,0 +1,18 @@
+Notes :
+1. GIT commands :
+	a. Open command line, go to D:\Development\AI
+	b. git status
+	c. git add changed files. 
+	d. git commit with message. e.g. git commit -m "Removed unwanted file"
+	e. git push -u origin main
+
+
+2. How to run email_llm_monitor_old.py ?
+
+	Steps :
+	1. Open command line and run : D:\Development\AI\llma\ws\one>ollama run gemma3
+	2. Send following mail from mandar.m.phatak@gmail.com to mandyce2006@gmail.com
+	3. Open command prompt and run python program like below :
+	   activatePythonVirtualEnv.bat
+	   (venv) D:\Development\AI\llma\ws\one>python email_llm_monitor_old.py
+
