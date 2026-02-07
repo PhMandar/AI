@@ -1,6 +1,0 @@
-pytest
-ipython
-jupyter
-langchain
-langchain-community
-ollama
