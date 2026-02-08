@@ -1,49 +1,57 @@
+'''
+1. Basic RAG with LangChain and Ollama program.
+This code builds a RAG pipeline:
+- Load → Split → Embed → Store → Retrieve
+- Wrap retrieved context + question into a prompt
+- Send to LLM → Get answer
+
+It’s essentially:
+“Search your documents → Feed results into the LLM → Answer based on them.”
+'''
+
 from langchain_ollama import OllamaLLM, OllamaEmbeddings
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
 
-# 1. Load document
-loader = TextLoader("data/sample.txt", encoding="utf-8")
-documents = loader.load()
 
-# 2. Split into chunks
-splitter = RecursiveCharacterTextSplitter(
+# Load
+docs = TextLoader("src/my_langchain/data/sample.txt", encoding="utf-8").load()
+
+# Split
+chunks = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=50
-)
-chunks = splitter.split_documents(documents)
+).split_documents(docs)
 
-# 3. Create embeddings (local!)
-embeddings = OllamaEmbeddings(
-    model="mistral"
-)
-
-vectorstore = FAISS.from_documents(chunks, embeddings)
-
-# 4. Create retriever
-retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-
-# 5. Create LLM
-llm = OllamaLLM(
-    model="mistral",
-    temperature=0.0
+# Vector store
+vectorstore = FAISS.from_documents(
+    chunks,
+    OllamaEmbeddings(model="mistral")
 )
 
-# 6. RAG Chain
-qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
-    retriever=retriever,
-    chain_type="stuff",
-    return_source_documents=True
+retriever = vectorstore.as_retriever()
+
+# Prompt
+prompt = ChatPromptTemplate.from_template("""
+Answer the question using only the context below.
+
+Context:
+{context}
+
+Question:
+{question}
+""")
+
+llm = OllamaLLM(model="mistral", temperature=0.7)
+
+# LCEL chain
+rag_chain = (
+    {"context": retriever, "question": RunnablePassthrough()}
+    | prompt
+    | llm
 )
 
-# 7. Ask question
-query = "What is LangChain?"
-result = qa_chain.invoke({"query": query})
-
-print("\nAnswer:\n", result["result"])
-print("\nSources:")
-for doc in result["source_documents"]:
-    print("-", doc.page_content[:80])
+print(rag_chain.invoke("What is LangChain?"))
