@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ask the LLM</title>
+</head>
+<body>
+  <h2>What do you want to ask?</h2>
+  <form id="askForm">
+    <input type="text" id="question" name="question" placeholder="Enter your question" required>
+    <button type="submit">OK</button>
+  </form>
+
+  <h3>Answer:</h3>
+  <div id="answer"></div>
+
+  <script>
+    document.getElementById("askForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const question = document.getElementById("question").value;
+
+      const response = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      });
+
+      const data = await response.json();
+      document.getElementById("answer").innerText = data.answer;
+    });
+  </script>
+</body>
+</html>
