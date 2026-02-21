@@ -1,3 +1,4 @@
+import os
 from langchain_ollama import OllamaLLM, OllamaEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -6,13 +7,23 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 
 # --- Build RAG pipeline once at import ---
-docs = PyPDFLoader("data/TheThreeLittlePigs.pdf").load()
+pdf_folder = "data"   # folder containing multiple PDFs
+all_docs = []
 
+# Loop through all PDF files in the folder
+for filename in os.listdir(pdf_folder):
+    if filename.lower().endswith(".pdf"):
+        loader = PyPDFLoader(os.path.join(pdf_folder, filename))
+        docs = loader.load()
+        all_docs.extend(docs)
+
+# Split into chunks
 chunks = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=50
-).split_documents(docs)
+).split_documents(all_docs)
 
+# Build vectorstore
 vectorstore = FAISS.from_documents(
     chunks,
     OllamaEmbeddings(model="mistral")
