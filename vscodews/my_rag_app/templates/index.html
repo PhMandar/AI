@@ -2,92 +2,53 @@
 <html>
 <head>
   <title>Ask the LLM</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh; /* full viewport height */
-      margin: 0;
-      background-color: #f9f9f9;
-    }
-    .container {
-      text-align: center;
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    input[type="text"] {
-      padding: 10px;
-      width: 300px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-top: 15px;
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #spinner {
-      display: none;
-      margin-top: 20px;
-    }
-    .loader {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid #007BFF;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #answer {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #333;
-    }
+    #spinner { display: none; }
+    .answer-cell { padding: 8px; }
+    .answer-date { font-size: 0.8em; color: gray; margin-top: 4px; }
+    .input-row { margin-top: 20px; }
+    button { margin-left: 5px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>What do you want to ask?</h2>
-    <form id="askForm">
-      <input type="text" id="question" name="question" placeholder="Enter your question" required>
-      <br>
-      <button type="submit">OK</button>
-    </form>
+    <h3>Answers</h3>
+    <table id="answersTable">
+      <thead>
+        <tr>
+          <th>Question</th>
+          <th>Answer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Rows will be appended here -->
+      </tbody>
+    </table>
+
+    <div class="input-row">
+      <form id="askForm">
+        <input type="text" id="question" name="question" placeholder="Enter your question" required>
+        <button type="submit">OK</button>
+        <button type="button" id="micBtn"><i class="fa fa-microphone"></i> Speak</button>
+        <button type="button" id="downloadBtn"><i class="fa fa-download"></i> Chat History</button>
+      </form>
+    </div>
 
     <div id="spinner">
       <div class="loader"></div>
       <p>Processing...</p>
     </div>
-
-    <h3>Answer:</h3>
-    <div id="answer"></div>
   </div>
 
   <script>
+    // --- Form submission ---
     document.getElementById("askForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const question = document.getElementById("question").value;
 
-      // Show spinner
       document.getElementById("spinner").style.display = "block";
-      document.getElementById("answer").innerText = "";
 
       try {
         const response = await fetch("/ask", {
@@ -97,14 +58,77 @@
         });
 
         const data = await response.json();
-        document.getElementById("answer").innerText = data.answer;
+
+        const tableBody = document.getElementById("answersTable").querySelector("tbody");
+        const newRow = document.createElement("tr");
+        const timestamp = new Date().toLocaleString();
+
+        newRow.innerHTML = `
+          <td>${question}</td>
+          <td class="answer-cell">
+            <div>${data.answer}</div>
+            <div class="answer-date">${timestamp}</div>
+          </td>
+        `;
+        tableBody.appendChild(newRow);
+
+        // Speak the answer aloud
+        speakText(data.answer);
+
+        document.getElementById("question").value = "";
       } catch (err) {
-        document.getElementById("answer").innerText = "Error fetching answer.";
+        alert("Error fetching answer.");
       } finally {
-        // Hide spinner
         document.getElementById("spinner").style.display = "none";
       }
     });
+
+    // --- CSV Export ---
+    document.getElementById("downloadBtn").addEventListener("click", function() {
+      const rows = document.querySelectorAll("#answersTable tr");
+      let csvContent = "";
+      rows.forEach(row => {
+        const cols = row.querySelectorAll("td, th");
+        const rowData = Array.from(cols).map(col => `"${col.innerText.replace(/"/g, '""')}"`).join(",");
+        csvContent += rowData + "\n";
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "qa_history.csv";
+      link.click();
+    });
+
+    // --- Speech Recognition setup ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+
+      document.getElementById("micBtn").addEventListener("click", () => {
+        recognition.start();
+      });
+
+      recognition.onresult = (event) => {
+        const spokenText = event.results[0][0].transcript;
+        document.getElementById("question").value = spokenText;
+        document.getElementById("askForm").dispatchEvent(new Event("submit"));
+      };
+    } else {
+      document.getElementById("micBtn").disabled = true;
+      alert("Speech recognition not supported in this browser.");
+    }
+
+    // --- Speech Synthesis setup ---
+    function speakText(text) {
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        speechSynthesis.speak(utterance);
+      }
+    }
   </script>
 </body>
 </html>
