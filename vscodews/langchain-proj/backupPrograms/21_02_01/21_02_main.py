@@ -1,5 +1,4 @@
 '''
-8 Feb 2026
 1. Basic RAG with LangChain and Ollama program.
 This code builds a RAG pipeline:
 - Load → Split → Embed → Store → Retrieve
