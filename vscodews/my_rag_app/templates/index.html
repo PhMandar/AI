@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ask Chappie</title>
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  <title>Ask the LLM</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <style>
@@ -12,10 +11,30 @@
     .input-row { margin-top: 20px; }
     button { margin-left: 5px; }
     select { margin-left: 10px; }
+
+    /* Robot styling */
+    #robot {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #robot img {
+      width: 120px;
+      transition: transform 0.3s ease;
+    }
+    #robot.talking img {
+      transform: scale(1.1);
+      filter: drop-shadow(0 0 10px #00f);
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Robot avatar -->
+    <div id="robot">
+      <img src="{{ url_for('static', filename='robot.png') }}" alt="Robot Assistant">
+      <p>I'm ready to answer!</p>
+    </div>
+
     <h3>Answers</h3>
     <table id="answersTable">
       <thead>
@@ -80,6 +99,11 @@
           </td>
         `;
         tableBody.appendChild(newRow);
+
+        // Robot "talks"
+        const robot = document.getElementById("robot");
+        robot.classList.add("talking");
+        setTimeout(() => robot.classList.remove("talking"), 2000);
 
         // Speak the answer aloud in selected language
         const selectedLang = document.getElementById("langSelect").value;
