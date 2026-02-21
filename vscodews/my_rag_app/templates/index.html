@@ -10,6 +10,7 @@
     .answer-date { font-size: 0.8em; color: gray; margin-top: 4px; }
     .input-row { margin-top: 20px; }
     button { margin-left: 5px; }
+    select { margin-left: 10px; }
   </style>
 </head>
 <body>
@@ -33,6 +34,13 @@
         <button type="submit">OK</button>
         <button type="button" id="micBtn"><i class="fa fa-microphone"></i> Speak</button>
         <button type="button" id="downloadBtn"><i class="fa fa-download"></i> Chat History</button>
+        <!-- Language selector -->
+        <label for="langSelect">Speak in:</label>
+        <select id="langSelect">
+          <option value="en-US" selected>English</option>
+          <option value="hi-IN">Hindi</option>
+          <option value="mr-IN">Marathi</option>
+        </select>
       </form>
     </div>
 
@@ -72,8 +80,9 @@
         `;
         tableBody.appendChild(newRow);
 
-        // Speak the answer aloud
-        speakText(data.answer);
+        // Speak the answer aloud in selected language
+        const selectedLang = document.getElementById("langSelect").value;
+        speakText(data.answer, selectedLang);
 
         document.getElementById("question").value = "";
       } catch (err) {
@@ -104,7 +113,7 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
+      recognition.lang = "en-US"; // Listening language fixed to English for now
       recognition.interimResults = false;
 
       document.getElementById("micBtn").addEventListener("click", () => {
@@ -122,10 +131,10 @@
     }
 
     // --- Speech Synthesis setup ---
-    function speakText(text) {
+    function speakText(text, langCode) {
       if ("speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "en-US";
+        utterance.lang = langCode;
         speechSynthesis.speak(utterance);
       }
     }
