@@ -1,0 +1,4 @@
+venv/
+app.log
+PyWhatKit_DB.txt
+pywhatkit_dbs.txt

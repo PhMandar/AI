@@ -1,0 +1,108 @@
+{
+	"info": {
+		"_postman_id": "8d4d02b4-91b4-4e3d-be7f-e77f2038c50d",
+		"name": "MyAI",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "6567365"
+	},
+	"item": [
+		{
+			"name": "TextMsgSendRequest",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "phone",
+							"value": "+919850310562",
+							"type": "text"
+						},
+						{
+							"key": "type",
+							"value": "text",
+							"type": "text"
+						},
+						{
+							"key": "caption",
+							"value": "Sending text",
+							"type": "text"
+						},
+						{
+							"key": "message",
+							"value": "Google",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/api/v1/send",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"v1",
+						"send"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ImgSendRequest",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "phone",
+							"value": "+919850310562",
+							"type": "text"
+						},
+						{
+							"key": "type",
+							"value": "image",
+							"type": "text"
+						},
+						{
+							"key": "caption",
+							"value": "Sending image",
+							"type": "text"
+						},
+						{
+							"key": "file",
+							"type": "file",
+							"src": "postman-cloud:///1f1101a2-80f9-4520-8b7c-7b561181a7d1"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/api/v1/send",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"v1",
+						"send"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
