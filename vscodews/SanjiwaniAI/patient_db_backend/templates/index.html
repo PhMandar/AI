@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chappie Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding-top: 80px; background: #1a1a2e; color: white; }
+        .container { background: #16213e; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 400px; }
+        
+        #status { font-size: 1.1rem; margin-bottom: 20px; color: #00d4ff; height: 25px; }
+        
+        .input-group { display: flex; gap: 10px; align-items: center; justify-content: center; }
+        
+        input[type="text"] {
+            padding: 12px; border-radius: 5px; border: none; width: 250px; font-size: 1rem; outline: none;
+        }
+
+        button { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        
+        #mic-btn { background: #e94560; color: white; font-size: 1.2rem; }
+        #mic-btn.recording { background: #ff0055; animation: pulse 1.5s infinite; }
+        
+        #ok-btn { background: #0f3460; color: #00d4ff; border: 1px solid #00d4ff; }
+        #ok-btn:hover { background: #00d4ff; color: #1a1a2e; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(233, 69, 96, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(233, 69, 96, 0); } 100% { box-shadow: 0 0 0 0 rgba(233, 69, 96, 0); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Chappie Vault</h2>
+        <div id="status">Ready</div>
+        
+        <div class="input-group">
+            <input type="text" id="user-input" placeholder="Type or use the mic...">
+            
+            <button id="mic-btn" title="Click to Speak">
+                <i class="fas fa-microphone"></i>
+            </button>
+            
+            <button id="ok-btn">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const statusDisplay = document.getElementById('status');
+        const inputField = document.getElementById('user-input');
+        const micBtn = document.getElementById('mic-btn');
+        const okBtn = document.getElementById('ok-btn');
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const synth = window.speechSynthesis;
+        let recognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                statusDisplay.innerText = "Listening...";
+                micBtn.classList.add('recording');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                inputField.value = transcript; // Auto-fill the text field
+                statusDisplay.innerText = "Voice captured!";
+                micBtn.classList.remove('recording');
+            };
+
+            recognition.onerror = () => {
+                statusDisplay.innerText = "Error catching voice.";
+                micBtn.classList.remove('recording');
+            };
+
+            recognition.onend = () => {
+                micBtn.classList.remove('recording');
+            };
+        }
+
+        // Voice Button Trigger
+        micBtn.onclick = () => {
+            if (recognition) {
+                recognition.start();
+            } else {
+                alert("Speech recognition not supported in this browser.");
+            }
+        };
+
+        // Text/OK Button Trigger
+        okBtn.onclick = () => {
+            const textToSave = inputField.value.trim();
+            if (textToSave) {
+                sendToServer(textToSave);
+            } else {
+                statusDisplay.innerText = "Please enter some data first.";
+            }
+        };
+
+        // Function to talk back
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            synth.speak(utterance);
+        }
+
+        // Database logic
+        async function sendToServer(text) {
+            statusDisplay.innerText = "Saving...";
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ text: text })
+                });
+                const data = await response.json();
+                
+                statusDisplay.innerText = "Data Stored Successfully!";
+                speak(data.reply);
+                inputField.value = ""; // Clear input after saving
+                
+                setTimeout(() => { statusDisplay.innerText = "Ready"; }, 3000);
+            } catch (err) {
+                statusDisplay.innerText = "Database connection error.";
+                speak("Error connecting to database.");
+            }
+        }
+    </script>
+</body>
+</html>
