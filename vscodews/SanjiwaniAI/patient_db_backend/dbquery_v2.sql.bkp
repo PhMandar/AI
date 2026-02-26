@@ -1,0 +1,19 @@
+-- Table for Patient Names
+CREATE TABLE patients (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for Vitals linked to Patient
+CREATE TABLE vitals (
+    id SERIAL PRIMARY KEY,
+    patient_id INTEGER REFERENCES patients(id),
+    bp TEXT,
+    oxygen TEXT,
+    pulse TEXT,
+    temperature TEXT,
+    weight TEXT,
+    height TEXT,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

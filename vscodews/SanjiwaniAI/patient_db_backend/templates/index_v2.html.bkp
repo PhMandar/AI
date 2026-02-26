@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chappie Medical Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 50px; background: #1a1a2e; color: white; }
+        .card { background: #16213e; padding: 30px; border-radius: 15px; display: inline-block; width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .input-group { margin: 20px 0; display: flex; gap: 10px; justify-content: center; }
+        input { padding: 12px; border-radius: 5px; border: none; width: 60%; }
+        button { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #00d4ff; color: #1a1a2e; }
+        .btn-mic { background: #e94560; color: white; }
+        .hidden { display: none; }
+        .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+        .vitals-grid label { font-size: 0.8rem; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 id="title">Chappie Medical</h2>
+    <p id="status">Say "New Patient" or type it.</p>
+
+    <!-- Step 1: Initial Action -->
+    <div id="step-1">
+        <div class="input-group">
+            <input type="text" id="main-input" placeholder="e.g. New Patient">
+            <button class="btn-mic" onclick="startVoice('main-input')"><i class="fas fa-microphone"></i></button>
+            <button class="btn-primary" onclick="handleInitialAction()">OK</button>
+        </div>
+    </div>
+
+    <!-- Step 2: Name Input -->
+    <div id="step-2" class="hidden">
+        <p>Enter Patient Name:</p>
+        <div class="input-group">
+            <input type="text" id="name-input">
+            <button class="btn-mic" onclick="startVoice('name-input')"><i class="fas fa-microphone"></i></button>
+            <button class="btn-primary" onclick="savePatient()">Next</button>
+        </div>
+    </div>
+
+    <!-- Step 3: Vitals Selection -->
+    <div id="step-3" class="hidden">
+        <p>What do you want to do?</p>
+        <button class="btn-primary" onclick="showVitalsForm()">Vitals</button>
+    </div>
+
+    <!-- Step 4: Vitals Form -->
+    <div id="step-4" class="hidden">
+        <div class="vitals-grid">
+            <div><label>BP</label><input type="text" id="v-bp" placeholder="120/80"></div>
+            <div><label>Oxygen</label><input type="text" id="v-ox" placeholder="98%"></div>
+            <div><label>Pulse</label><input type="text" id="v-pulse" placeholder="72"></div>
+            <div><label>Temp</label><input type="text" id="v-temp" placeholder="98.6"></div>
+            <div><label>Weight</label><input type="text" id="v-weight" placeholder="70kg"></div>
+            <div><label>Height</label><input type="text" id="v-height" placeholder="175cm"></div>
+        </div>
+        <br>
+        <button class="btn-primary" style="width:100%" onclick="saveVitals()">Save All Vitals</button>
+    </div>
+</div>
+
+<script>
+    let currentPatientId = null;
+    const synth = window.speechSynthesis;
+
+    function speak(text) { synth.speak(new SpeechSynthesisUtterance(text)); }
+
+    function startVoice(targetId) {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.onresult = (e) => { document.getElementById(targetId).value = e.results[0][0].transcript; };
+        recognition.start();
+    }
+
+    function handleInitialAction() {
+        const val = document.getElementById('main-input').value.toLowerCase();
+        if (val.includes("new patient")) {
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+            speak("What is the patient's name?");
+        }
+    }
+
+    async function savePatient() {
+        const name = document.getElementById('name-input').value;
+        const res = await fetch('/process', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: "CREATE_PATIENT", data: name })
+        });
+        const data = await res.json();
+        currentPatientId = data.patient_id;
+        speak("Ok. What do you want to do?");
+        document.getElementById('step-2').classList.add('hidden');
+        document.getElementById('step-3').classList.remove('hidden');
+    }
+
+    function showVitalsForm() {
+        document.getElementById('step-3').classList.add('hidden');
+        document.getElementById('step-4').classList.remove('hidden');
+        speak("Please enter BP, oxygen, pulse, temperature, weight, and height.");
+    }
+
+    async function saveVitals() {
+        const vitalsData = {
+            bp: document.getElementById('v-bp').value,
+            oxygen: document.getElementById('v-ox').value,
+            pulse: document.getElementById('v-pulse').value,
+            temp: document.getElementById('v-temp').value,
+            weight: document.getElementById('v-weight').value,
+            height: document.getElementById('v-height').value
+        };
+        const res = await fetch('/process', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: "SAVE_VITALS", patient_id: currentPatientId, data: vitalsData })
+        });
+        const data = await res.json();
+        speak(data.message);
+        alert(data.message);
+        location.reload(); // Reset for next patient
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+from flask import Flask, request, jsonify, render_template
+import psycopg2
+
+app = Flask(__name__)
+
+DB_CONFIG = {
+    "dbname": "postgres",
+    "user": "postgres",
+    "password": "postgres",
+    "host": "localhost",
+    "port": "5432"
+}
+
+def execute_query(query, vars):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute(query, vars)
+        result = None
+        if cur.description:
+            result = cur.fetchone()
+        conn.commit()
+        cur.close()
+        conn.close()
+        return result
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return None
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/process', methods=['POST'])
+def process():
+    data = request.json
+    action = data.get("action")
+    payload = data.get("data")
+
+    print(f"Action: {action}, Payload: {payload}")  # Debugging statement
+
+    if action == "CREATE_PATIENT":
+        # Check if patient exists or create new
+        res = execute_query("INSERT INTO patients (name) VALUES (%s) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id", (payload,))
+        return jsonify({"status": "success", "patient_id": res[0], "message": f"Patient {payload} initialized."})
+
+    if action == "SAVE_VITALS":
+        p_id = data.get("patient_id")
+        v = payload # Dictionary of vitals
+        execute_query("""
+            INSERT INTO vitals (patient_id, bp, oxygen, pulse, temperature, weight, height) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (p_id, v['bp'], v['oxygen'], v['pulse'], v['temp'], v['weight'], v['height']))
+        return jsonify({"status": "success", "message": "Vitals saved successfully!"})
+
+    return jsonify({"status": "error"})
+
+if __name__ == '__main__':
+    app.run(debug=True)
