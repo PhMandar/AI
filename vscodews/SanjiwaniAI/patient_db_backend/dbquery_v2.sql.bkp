@@ -17,3 +17,16 @@ CREATE TABLE vitals (
     height TEXT,
     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+## Sample Queries
+SELECT * FROM public.patients
+ORDER BY id ASC 
+
+SELECT * from public.vitals
+
+delete from vitals
+truncate table vitals
+
+delete from patients
+TRUNCATE TABLE patients RESTART IDENTITY;
+TRUNCATE TABLE patients RESTART IDENTITY CASCADE;

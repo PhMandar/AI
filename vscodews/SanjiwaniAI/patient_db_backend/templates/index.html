@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chappie Medical Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 50px; background: #1a1a2e; color: white; }
+        .card { background: #16213e; padding: 30px; border-radius: 15px; display: inline-block; width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .input-group { margin: 20px 0; display: flex; gap: 10px; justify-content: center; }
+        input { padding: 12px; border-radius: 5px; border: none; width: 60%; }
+        button { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #00d4ff; color: #1a1a2e; }
+        .btn-mic { background: #e94560; color: white; }
+        .hidden { display: none; }
+        .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+        .vitals-grid label { font-size: 0.8rem; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2 id="title">Sanjiwani AI</h2>
+    <p id="status">Ready</p>
+
+    <!-- New/Old Selection -->
+    <div id="step-1">
+        <button class="btn-primary" onclick="goToStep(2)">New Patient</button>
+        <button class="btn-primary" onclick="goToStep(5)">Old Patient</button>
+    </div>
+
+    <!-- Name Input -->
+    <div id="step-2" class="hidden">
+        <p>Patient Name:</p>
+        <input type="text" id="name-input">
+        <button class="btn-primary" onclick="savePatient()">Save & Next</button>
+    </div>
+
+    <!-- Action Selection -->
+    <div id="step-3" class="hidden">
+        <p id="action-prompt"></p>
+        <button class="btn-primary" onclick="showVitalsForm()">Vitals</button>
+    </div>
+
+    <!-- Vitals Form -->
+    <div id="step-4" class="hidden">
+        <h4 id="vitals-header" style="color:#00d4ff"></h4>
+        <div class="vitals-grid">
+            <div><label>BP</label><input type="text" id="v-bp"></div>
+            <div><label>Oxygen</label><input type="text" id="v-ox"></div>
+            <div><label>Pulse</label><input type="text" id="v-pulse"></div>
+            <div><label>Temp</label><input type="text" id="v-temp"></div>
+            <div><label>Weight</label><input type="text" id="v-weight"></div>
+            <div><label>Height</label><input type="text" id="v-height"></div>
+        </div>
+        <button class="btn-primary" style="width:100%; margin-top:10px" onclick="saveVitals()">Save Vitals</button>
+    </div>
+
+    <!-- Old Patient Search -->
+    <div id="step-5" class="hidden">
+        <p>Enter Patient ID:</p>
+        <input type="number" id="search-id">
+        <button class="btn-primary" onclick="fetchDates()">Find Records</button>
+    </div>
+
+    <!-- Date Selection -->
+    <div id="step-6" class="hidden">
+        <p id="date-prompt"></p>
+        <div id="date-buttons"></div>
+    </div>
+</div>
+
+<script>
+    let curId = null;
+    let curName = "";
+    const speak = (t) => window.speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+
+    function goToStep(s) {
+        document.querySelectorAll('.card > div').forEach(d => d.classList.add('hidden'));
+        document.getElementById('step-' + s).classList.remove('hidden');
+    }
+
+    async function savePatient() {
+        const name = document.getElementById('name-input').value;
+        const res = await fetch('/process', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: "CREATE_PATIENT", data: name })
+        });
+        const data = await res.json();
+        curId = data.patient_id;
+        curName = data.name;
+        
+        document.getElementById('action-prompt').innerText = `What do you want to do for ${curName}?`;
+        speak(`What do you want to do for ${curName}?`);
+        goToStep(3);
+    }
+
+    function showVitalsForm() {
+        document.getElementById('vitals-header').innerText = `Vitals for ${curName} (ID: ${curId})`;
+        goToStep(4);
+    }
+
+    async function saveVitals() {
+        const payload = {
+            bp: document.getElementById('v-bp').value,
+            oxygen: document.getElementById('v-ox').value,
+            pulse: document.getElementById('v-pulse').value,
+            temp: document.getElementById('v-temp').value,
+            weight: document.getElementById('v-weight').value,
+            height: document.getElementById('v-height').value
+        };
+        await fetch('/process', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: "SAVE_VITALS", patient_id: curId, data: payload })
+        });
+        const msg = `Vitals saved successfully for ${curName}: ID ${curId}`;
+        speak(msg);
+        alert(msg);
+        location.reload();
+    }
+
+    async function fetchDates() {
+        const id = document.getElementById('search-id').value;
+        const res = await fetch('/process', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: "FETCH_DATES", data: id })
+        });
+        const data = await res.json();
+        if (data.status === "error") return alert(data.message);
+
+        curId = id; curName = data.name;
+        document.getElementById('date-prompt').innerText = `Records found for ${curName}. Select a date:`;
+        speak(`Which date do you want to see for ${curName}?`);
+        
+        const container = document.getElementById('date-buttons');
+        container.innerHTML = "";
+        data.dates.forEach(d => {
+            const b = document.createElement('button');
+            b.className = "btn-primary";
+            b.style = "display:block; width:100%; margin-bottom:5px";
+            b.innerText = d.date;
+            b.onclick = () => showSpecificVital(d.id);
+            container.appendChild(b);
+        });
+        goToStep(6);
+    }
+
+    async function showSpecificVital(vitalId) {
+        const res = await fetch('/process', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: "FETCH_SPECIFIC_VITAL", data: vitalId })
+        });
+        const data = await res.json();
+        const v = data.vitals;
+        alert(`Vitals: BP:${v.bp}, O2:${v.oxygen}, Pulse:${v.pulse}, Temp:${v.temp}`);
+        location.reload();
+    }
+</script>
+
+</body>
+</html>
